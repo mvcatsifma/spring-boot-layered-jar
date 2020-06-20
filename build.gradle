@@ -1,24 +1,51 @@
 plugins {
-	id 'org.springframework.boot' version '2.3.1.RELEASE'
-	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
-	id 'java'
+    id 'org.springframework.boot' version '2.3.1.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'java'
+}
+
+// appBuild can be set using specially-named environment variable:
+// `ORG_GRADLE_PROJECT_appBuild=foo gr bootBuildImage`
+String appBuild
+if (project.hasProperty("appBuild")) {
+    appBuild = project.appBuild
+} else {
+    appBuild = 'latest'
 }
 
 group = 'nl.dsen'
-version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation('org.springframework.boot:spring-boot-starter-test') {
-		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-	}
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
 }
 
 test {
-	useJUnitPlatform()
+    useJUnitPlatform()
+}
+
+// bootJar builds a layered executable jar.
+bootJar {
+    layered()
+    manifest() {
+        attributes(
+                'Implementation-Version': appBuild
+        )
+    }
+}
+
+// bootBuildImage task creates an OCI image from executable
+// jars using Cloud Native Buildpacks
+bootBuildImage {
+    imageName = "ad-buildsrv-01:5000/${project.name}:${appBuild}"
+// FIXME: environment variable is not accessible from container
+// environment = ["APP_BUILD": appBuild]
 }
